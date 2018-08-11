@@ -2,6 +2,7 @@
   "name": "tableau-semiotic-extensions",
   "version": "0.1.0",
   "private": true,
+  "homepage" : "https://github.com/demartsc/temp-semiotic-hierarchy",
   "dependencies": {
     "@material-ui/core": "^1.0.0",
     "@material-ui/icons": "^1.0.0",
