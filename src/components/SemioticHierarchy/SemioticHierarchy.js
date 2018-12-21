@@ -79,7 +79,7 @@ class SemioticHierarchy extends React.Component {
             nodeRender,
             edgeRender,
             hoverAnnotation,
-            type
+            type = 'circlepack'
         } = this.props;
         
         console.log('hierarchy Data in sub component', JSON.stringify(this.state.edgeData));
@@ -98,13 +98,13 @@ class SemioticHierarchy extends React.Component {
                         edgeWidthAccessor={d => d.valueMetric || 0}
                         hoverAnnotation={hoverAnnotation}
                         networkType={{
-                            type: "tree",
-                            projection: "vertical",
+                            type: "chord",
+                            projection: "radial",
                             nodePadding: 1,
                             forceManyBody: -15,
                             edgeStrength: 1.5,
                             padding: type === "treemap" ? 3 : type === "circlepack" ? 2 : 0,
-                            //hierarchySum: d => d.valueMetric || 0
+                            hierarchySum: d => d.valueMetric || 0
                         }}                
                         /*
                         tooltipContent={d => (
