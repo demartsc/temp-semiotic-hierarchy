@@ -121,7 +121,7 @@ class SemioticHierarchy extends React.Component {
         }
         
 
-        console.log('hierarchy Data in sub component');
+        console.log('hierarchy Data in sub component', this.props.highlightOn);
         return (
             <div className="semiotic-hierarchy" style={{ padding: '1%', height: height, width: width, float: 'none', margin: '0 auto' }}>
                 <ResponsiveNetworkFrame
@@ -146,7 +146,7 @@ class SemioticHierarchy extends React.Component {
                         }
                       }, { type: "frame-hover" }]}
                     // hoverAnnotation={hoverAnnotation}
-                    customHoverBehavior={this.props.hoverCallBack}
+                    // customHoverBehavior={this.props.hoverCallBack}
                     customClickBehavior={this.props.clickCallBack}
                     annotations={annotations}
                     networkType={{
