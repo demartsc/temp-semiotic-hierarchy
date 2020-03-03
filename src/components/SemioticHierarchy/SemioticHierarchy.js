@@ -4,6 +4,10 @@ import PropTypes from 'prop-types';
 //semiotic
 import { ResponsiveNetworkFrame } from 'semiotic';
 
+//d3
+import * as d3Scale from "d3-scale";
+import * as d3Array from "d3-array";
+
 //lodash
 import _ from 'lodash';
 
@@ -19,6 +23,9 @@ const styles = {
     flexGrow: 1,
   },
 };
+
+const MIN_MARKER_RADIUS = 5;
+const MAX_MARKER_RADIUS = 15;
 
 class SemioticHierarchy extends React.Component {
     constructor (props) {
@@ -50,20 +57,38 @@ class SemioticHierarchy extends React.Component {
         return tree;
     }
 
+    buildNodeSizeScale = (nodeData, markerMinRadius, markerMaxRadius) => {
+        if (!nodeData) {
+          return () => {};
+        }
+        function remapper(d) {
+          return parseFloat(d["valueMetric"] || 0) || 0;
+        }
+        return d3Scale.scaleSqrt()
+          .domain(d3Array.extent(nodeData, remapper))
+          .range([
+            markerMinRadius*1 || MIN_MARKER_RADIUS*1,
+            markerMaxRadius*1 || MAX_MARKER_RADIUS*1,
+          ]);
+    }
 
     componentDidMount() {
         console.log('in semiotic component mount', this.props.hierarchyData);
 
         //let edgeData = this.unflatten(this.props.hierarchyData,{child: 'flare'});
-        let edgeData = this.props.edgeData
-        console.log('edgeData', edgeData);
+        const edgeData = this.props.edgeData
+        console.log('edgeData', edgeData, this.props.hierarchyData);
 
-        let nodeData = _.uniqBy(this.props.hierarchyData, 'child'); //_.filter(_.uniqBy(this.props.hierarchyData, 'child'), (o) => { return o.child !== 'flare'; });
+        // const nodeData = _.uniqBy(this.props.hierarchyData, 'name'); //_.filter(_.uniqBy(this.props.hierarchyData, 'child'), (o) => { return o.child !== 'flare'; });
+        const nodeData = this.props.nodeData;
         console.log('nodeData', nodeData);
+
+        const nodeSizeScale = this.buildNodeSizeScale(nodeData, MIN_MARKER_RADIUS, MAX_MARKER_RADIUS);
 
         this.setState({
             edgeData: edgeData,
-            nodeData: nodeData
+            nodeData: nodeData, 
+            nodeSizeScale: nodeSizeScale
         })
     }
   
@@ -79,44 +104,63 @@ class SemioticHierarchy extends React.Component {
             nodeRender,
             edgeRender,
             hoverAnnotation,
-            type = 'circlepack'
+            type, 
+            annotations
         } = this.props;
-        
-        console.log('hierarchy Data in sub component', JSON.stringify(this.state.edgeData));
-        return (
-            <div className="semiotic-hierarchy" style={{ padding: 10, height: height*.65, flex: 1, float: 'none', margin: '0 auto' }}>
-                <div style={{ height: height, width: width, float: 'none', margin: '0 auto' }}>
-                    <ResponsiveNetworkFrame
-                        responsiveWidth
-                        responsiveHeight
-                        edges={this.state.edgeData}
-                        nodeIDAccessor={d => d.child}
-                        nodeRenderMode={nodeRender}
-                        edgeRenderMode={edgeRender}
-                        nodeStyle={(d,i) => ({ fill: color[d.depth] || defaultColor , stroke: color[d.depth] || defaultColor })}
-                        edgeStyle={(d,i) => ({ fill: defaultColor, stroke: defaultColor, opacity: 0.5 })}
-                        edgeWidthAccessor={d => d.valueMetric || 0}
-                        hoverAnnotation={hoverAnnotation}
-                        networkType={{
-                            type: "chord",
-                            projection: "radial",
-                            nodePadding: 1,
-                            forceManyBody: -15,
-                            edgeStrength: 1.5,
-                            padding: type === "treemap" ? 3 : type === "circlepack" ? 2 : 0,
-                            hierarchySum: d => d.valueMetric || 0
-                        }}                
-                        /*
-                        tooltipContent={d => (
-                            <div className="tooltip-content">
-                            {d.parent ? <p>{d.parent.data.name}</p> : undefined}
-                            <p>{d.data.name}</p>
-                            </div>
-                        )}
-                    */
 
-/>
-                </div>
+        // create the custom tooltip for semiotic
+        const popOver = (d) => {
+            // console.log('in tooltip', d);
+            return (
+                <Paper style={{'padding': '5px'}}>
+                    <Typography> {'parent'}: {d.parent.name} </Typography>
+                    <Typography> {'child'}: {d.name} </Typography>
+                    <Typography> {'value'}: {d.valueMetric} </Typography>
+                </Paper>
+            );
+        }
+        
+
+        console.log('hierarchy Data in sub component');
+        return (
+            <div className="semiotic-hierarchy" style={{ padding: '1%', height: height, width: width, float: 'none', margin: '0 auto' }}>
+                <ResponsiveNetworkFrame
+                    responsiveWidth
+                    responsiveHeight
+                    edges={this.state.edgeData}
+                    nodeIDAccessor={d => d.name}
+                    nodeSizeAccessor={
+                        d => this.state.nodeSizeScale(d.valueMetric || 0)
+                    } // this breaks the treemap and circlepack
+                    nodeRenderMode={nodeRender}
+                    edgeRenderMode={edgeRender}
+                    nodeStyle={(d,i) => ({ fill: color[d.depth] || defaultColor , stroke: color[d.depth] || defaultColor })}
+                    edgeStyle={(d,i) => ({ fill: defaultColor, stroke: defaultColor, opacity: 0.5 })}
+                    // edgeWidthAccessor={d => d.valueMetric || 0}
+                    hoverAnnotation={[{
+                        type: 'highlight',
+                        style : {
+                          stroke: "#222222",
+                          strokeWidth: 2,
+                          strokeOpacity: 1
+                        }
+                      }, { type: "frame-hover" }]}
+                    // hoverAnnotation={hoverAnnotation}
+                    customHoverBehavior={this.props.hoverCallBack}
+                    customClickBehavior={this.props.clickCallBack}
+                    annotations={annotations}
+                    networkType={{
+                        type: "tree",
+                        zoom: true,
+                        projection: "vertical",
+                        nodePadding: 1,
+                        forceManyBody: -15,
+                        edgeStrength: 1.5,
+                        padding: type === "treemap" ? 3 : type === "circlepack" ? 2 : 0,
+                        //hierarchySum: d => d.valueMetric || 0
+                    }}
+                    tooltipContent={d => popOver(d)}
+                />
             </div>
         );
     }
